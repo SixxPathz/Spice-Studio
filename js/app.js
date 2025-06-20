@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
         addMessageToChat('bot', randomGreeting);
     }
       // My Spoonacular API key
-    const API_KEY = '19d94f8761c5481f8d80e63218206b3f';
+    const API_KEY = '699ef63ca0974a95b5f45fb3031e89ff';
     
     // Open notebook animation
     openNotebookBtn.addEventListener('click', function() {
@@ -145,16 +145,30 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Scroll to bottom
         chatMessages.scrollTop = chatMessages.scrollHeight;
-    }      // the main recipe search function
+    }    // the main recipe search function
     async function searchRecipes(ingredients) {
         try {
             let data;
             
             // see if they want veggie/vegan/etc.
             const dietPreferences = detectDietaryPreferences(ingredients);
+              // Check if we already know the API is invalid from localStorage
+            // This saves us from making wasteful API calls when we know they'll fail
+            const isApiKeyValid = localStorage.getItem('apiKeyValid') !== 'false';
             
-            // call the api for recipes
-            try {                // build the search url
+            // Check if we have enough API points left for this request (6 points for 6 recipes)
+            const haveEnoughPoints = canMakeApiRequest(6);
+            
+            // call the api for recipes only if we think the key might be valid
+            try {
+                // If we know the API key is invalid or we don't have enough points, don't even try
+                if (!isApiKeyValid || !haveEnoughPoints) {
+                    const errorReason = localStorage.getItem('apiErrorReason') || 'unknown';
+                    throw new Error(errorReason === 'auth' ? 'API_AUTH_ERROR' : 
+                                   (errorReason === 'limit' ? 'API_RATE_LIMIT' : 'API_ERROR'));
+                }
+                
+                // build the search url
                 let apiUrl = `https://api.spoonacular.com/recipes/complexSearch?query=${encodeURIComponent(ingredients)}&number=6&addRecipeInformation=true&fillIngredients=true&apiKey=${API_KEY}`;
                 
                 // Add any dietary filters
@@ -191,8 +205,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         throw new Error(errorMessage);
                     }
                 }
+                  const apiResponse = await response.json();
                 
-                const apiResponse = await response.json();                  // make sure we got something back
+                // Track our API usage - each recipe costs 1 point
+                trackApiUsage(apiResponse.results ? apiResponse.results.length : 0);
+                                
+                // make sure we got something back
                 if (!apiResponse.results || apiResponse.results.length === 0) {
                     console.log("No recipes found");
                     data = []; 
@@ -373,13 +391,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 10);
         
         return card;
-    }
-      // Opens modal with detailed recipe information
+    }    // Opens modal with detailed recipe information
     async function showRecipeDetails(recipePreview) {
         let recipeDetail;
         
         try {
             console.log("Getting details for:", recipePreview.id);
+              // Check if we already know the API is invalid from localStorage
+            const isApiKeyValid = localStorage.getItem('apiKeyValid') !== 'false';
+            
+            // Check if we have enough API points left for this request (1 point for recipe details)
+            const haveEnoughPoints = canMakeApiRequest(1);
+            
+            // Don't even try if we know the API key is invalid or we don't have enough points
+            if (!isApiKeyValid || !haveEnoughPoints) {
+                const errorReason = localStorage.getItem('apiErrorReason') || 'unknown';
+                throw new Error(errorReason === 'auth' ? 'API_AUTH_ERROR' : 
+                               (errorReason === 'limit' ? 'API_RATE_LIMIT' : 'API_ERROR'));
+            }
             
             const response = await fetch(
                 `https://api.spoonacular.com/recipes/${recipePreview.id}/information?includeNutrition=false&apiKey=${API_KEY}`
@@ -394,9 +423,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     throw new Error(`Failed to fetch recipe details: ${response.status} ${response.statusText}`);
                 }
             }
-            
-            recipeDetail = await response.json();
+              recipeDetail = await response.json();
             console.log("Recipe detail retrieved:", recipeDetail.title);
+            
+            // Track API usage - 1 point per recipe detail
+            trackApiUsage(1);
               // Add source attribution
             const recipeSource = document.createElement('div');
             recipeSource.className = 'recipe-source';
@@ -622,43 +653,173 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-      // Tests the API connection on startup
+    // Track our API usage to avoid exceeding the free tier limit (150 points/day)
+    function trackApiUsage(pointsUsed) {
+        const today = new Date().toDateString();
+        const currentUsage = parseInt(localStorage.getItem('apiPointsUsed') || '0');
+        const lastUsageDay = localStorage.getItem('apiUsageDate');
+        
+        // Reset counter if this is a new day
+        if (lastUsageDay !== today) {
+            localStorage.setItem('apiPointsUsed', pointsUsed.toString());
+            localStorage.setItem('apiUsageDate', today);
+        } else {
+            // Add to today's usage
+            localStorage.setItem('apiPointsUsed', (currentUsage + pointsUsed).toString());
+        }
+        
+        // Log current usage
+        const updatedUsage = parseInt(localStorage.getItem('apiPointsUsed'));
+        console.log(`API usage today: ${updatedUsage}/150 points`);
+        
+        // If we're getting close to the limit, show a warning
+        if (updatedUsage > 120 && !sessionStorage.getItem('apiLimitWarningShown')) {
+            addMessageToChat('bot', "We're getting close to today's API limit. Some features might switch to offline mode soon. 📊");
+            sessionStorage.setItem('apiLimitWarningShown', 'true');
+        }
+        
+        // If we've exceeded the limit, mark the API as invalid for today
+        if (updatedUsage >= 150) {
+            localStorage.setItem('apiKeyValid', 'false');
+            localStorage.setItem('apiErrorReason', 'limit');
+        }
+        
+        return updatedUsage;
+    }
+    
+    // Call this before making API requests to check if we have enough points left
+    function canMakeApiRequest(requiredPoints) {
+        const today = new Date().toDateString();
+        const lastUsageDay = localStorage.getItem('apiUsageDate');
+        
+        // If this is a new day, reset the counter
+        if (lastUsageDay !== today) {
+            localStorage.setItem('apiPointsUsed', '0');
+            localStorage.setItem('apiUsageDate', today);
+            return true;
+        }
+        
+        // Check current usage
+        const currentUsage = parseInt(localStorage.getItem('apiPointsUsed') || '0');
+        const wouldExceedLimit = (currentUsage + requiredPoints) > 150;
+        
+        if (wouldExceedLimit) {
+            console.warn(`API usage limit would be exceeded: ${currentUsage}+${requiredPoints} > 150`);
+            
+            // Mark API as invalid for today due to limit
+            localStorage.setItem('apiKeyValid', 'false');
+            localStorage.setItem('apiErrorReason', 'limit');
+            return false;
+        }
+        
+        return true;
+    }
+
+    // Tests the API connection - but not on every page load to save API calls
     async function validateApiKey() {
+        // Only validate once per day using localStorage to save API calls
+        // This helps me stay under the 150 points daily limit on the free tier
+        const lastCheck = localStorage.getItem('apiKeyLastCheck');
+        const now = new Date().toDateString();
+        
+        if (lastCheck === now) {
+            const isValid = localStorage.getItem('apiKeyValid') === 'true';
+            console.log('Using cached API validation from today:', isValid ? 'valid' : 'invalid');
+            
+            // If it was invalid earlier today but we haven't shown a message yet in this session
+            if (!isValid && !window.sessionStorage.getItem('apiErrorShown')) {
+                const errorReason = localStorage.getItem('apiErrorReason') || 'connection';
+                let errorMessage = 'Connection issue - some features will use saved data instead. 🔧';
+                
+                if (errorReason === 'auth') {
+                    errorMessage = 'API key needs updating - using saved recipes for now. 🔑';
+                } else if (errorReason === 'limit') {
+                    errorMessage = 'API limit reached - using saved recipes until tomorrow. 🕒';
+                }
+                
+                // Show message but only once per session
+                window.sessionStorage.setItem('apiErrorShown', 'true');
+                addMessageToChat('bot', errorMessage);
+            }
+            
+            return isValid;
+        }
+        
+        // We need to check with the API since this is our first check today
         try {
+            console.log('Validating API key with Spoonacular...');
             const testResponse = await fetch(`https://api.spoonacular.com/recipes/random?number=1&apiKey=${API_KEY}`);
             
             if (!testResponse.ok) {
                 // Create appropriate message
                 let errorMessage = 'Connection issue - some features will use saved data instead. 🔧';
+                let errorReason = 'connection';
                 
                 if (testResponse.status === 401 || testResponse.status === 403) {
                     errorMessage = 'API key needs updating - using saved recipes for now. 🔑';
+                    errorReason = 'auth';
                 } else if (testResponse.status === 429) {
                     errorMessage = 'API limit reached - using saved recipes until tomorrow. 🕒';
+                    errorReason = 'limit';
                 }
                 
+                // Save error reason for later sessions today
+                localStorage.setItem('apiErrorReason', errorReason);
+                
                 // Show message
+                window.sessionStorage.setItem('apiErrorShown', 'true');
                 addMessageToChat('bot', errorMessage);
                 
+                // Update validation state
+                localStorage.setItem('apiKeyLastCheck', now);
+                localStorage.setItem('apiKeyValid', 'false');
                 return false;
             }
             
+            // API is working!
             console.log('API key validation successful');
+            localStorage.setItem('apiKeyLastCheck', now);
+            localStorage.setItem('apiKeyValid', 'true');
             return true;
         } catch (error) {
             console.error('API validation error:', error);
             // Show a network error message
             addMessageToChat('bot', 'Unable to connect to the recipe service. Using demo data instead. Check your internet connection. 📶');
+            
+            // Update validation state
+            localStorage.setItem('apiKeyLastCheck', now);
+            localStorage.setItem('apiKeyValid', 'false');
+            localStorage.setItem('apiErrorReason', 'connection');
+            window.sessionStorage.setItem('apiErrorShown', 'true');
             return false;
         }
-    }
-      // Check API key on startup
+    }      // Check API key on startup but don't waste points if we already validated today
     validateApiKey().then(isValid => {
         if (isValid) {
             console.log("API connection successful");
-            setTimeout(() => {
-                addMessageToChat('bot', 'Connected to recipe database! Ready to find dishes for your ingredients! 🌟');
-            }, 1000);
+            
+            // Show API usage stats
+            const today = new Date().toDateString();
+            const lastUsageDay = localStorage.getItem('apiUsageDate');
+            const currentUsage = parseInt(localStorage.getItem('apiPointsUsed') || '0');
+            
+            if (lastUsageDay !== today) {
+                // New day - reset counter and track this validation call (1 point)
+                trackApiUsage(1);  
+                setTimeout(() => {
+                    addMessageToChat('bot', 'Connected to recipe database! Ready to find dishes for your ingredients! 🌟');
+                }, 1000);
+            } else {
+                // Already have usage today
+                console.log(`API usage so far today: ${currentUsage}/150 points`);
+                if (currentUsage === 0) {
+                    // This validation call was our first usage today
+                    trackApiUsage(1);
+                }
+                setTimeout(() => {
+                    addMessageToChat('bot', 'Connected to recipe database! Ready to find dishes for your ingredients! 🌟');
+                }, 1000);
+            }
         } else {
             console.warn("Using local recipe data");
         }
