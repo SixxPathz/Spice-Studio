@@ -10,6 +10,46 @@
     --chat-bot-bg: #f8e9f0;
     --button-color: #4a9e76;
     --notebook-cover: #8e4444;
+    --status-online: #4CAF50;
+    --status-offline: #F44336;
+}
+
+/* API Status Indicator */
+.api-status-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 5px 10px;
+    border-radius: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    font-size: 0.85rem;
+    z-index: 100;
+    transition: all 0.3s ease;
+}
+
+.status-icon {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    background-color: #999; /* neutral color before status is determined */
+}
+
+.status-icon.online {
+    background-color: var(--status-online);
+    box-shadow: 0 0 8px var(--status-online);
+}
+
+.status-icon.offline {
+    background-color: var(--status-offline);
+    box-shadow: 0 0 8px var(--status-offline);
+}
+
+.status-text {
+    font-weight: 500;
 }
 
 * {

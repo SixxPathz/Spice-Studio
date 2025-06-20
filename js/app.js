@@ -9,9 +9,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const recipesContainer = document.getElementById('recipes-container');
     const recipeModal = document.getElementById('recipe-modal');
     const closeButton = document.querySelector('.close-button');
+    const statusIcon = document.getElementById('status-icon');
+    const statusText = document.getElementById('status-text');
     
-    // Add default image for broken recipe images
-    const defaultRecipeImage = 'https://spoonacular.com/recipeImages/default-recipe.jpg';
+    // Initialize the status indicator with a default state
+    if (statusIcon && statusText) {
+        statusIcon.className = 'status-icon';
+        statusText.textContent = 'Checking connection...';
+    }
+      // Add default image for broken recipe images
+    const defaultRecipeImage = 'https://www.themealdb.com/images/media/meals/default.jpg';
     
     // Helper function to handle image loading errors
     function handleImageError(img) {
@@ -55,14 +62,13 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('lastGreetingIndex', newIndex.toString());
         
         return greetings[newIndex];
-    }
+    }    // Clear previous messages to start fresh
+    // Clear the chat container first
+    chatMessages.innerHTML = '';
     
-    // Initialize with a random greeting when there are no messages yet
-    if (chatMessages.children.length === 0) {
-        addMessageToChat('bot', getRandomGreeting());
-    }
-      // My Spoonacular API key
-    const API_KEY = '699ef63ca0974a95b5f45fb3031e89ff';
+    // The greeting will be added after checking the API connection
+      // We're using TheMealDB which doesn't require an API key for basic usage
+    // The free API is accessed via the URL: "https://www.themealdb.com/api/json/v1/1/"
     
     // Open notebook animation
     openNotebookBtn.addEventListener('click', function() {
@@ -163,98 +169,116 @@ document.addEventListener('DOMContentLoaded', function() {
     }    // the main recipe search function
     async function searchRecipes(ingredients) {
         try {
-            let data;
+            let data = [];
             
             // see if they want veggie/vegan/etc.
             const dietPreferences = detectDietaryPreferences(ingredients);
-              // Check if we already know the API is invalid from localStorage
-            // This saves us from making wasteful API calls when we know they'll fail
-            const isApiKeyValid = localStorage.getItem('apiKeyValid') !== 'false';
             
-            // Check if we have enough API points left for this request (6 points for 6 recipes)
-            const haveEnoughPoints = canMakeApiRequest(6);
-            
-            // call the api for recipes only if we think the key might be valid
             try {
-                // If we know the API key is invalid or we don't have enough points, don't even try
-                if (!isApiKeyValid || !haveEnoughPoints) {
-                    const errorReason = localStorage.getItem('apiErrorReason') || 'unknown';
-                    throw new Error(errorReason === 'auth' ? 'API_AUTH_ERROR' : 
-                                   (errorReason === 'limit' ? 'API_RATE_LIMIT' : 'API_ERROR'));
-                }
+                // Extract main ingredient for TheMealDB search
+                // TheMealDB doesn't support multi-ingredient queries like Spoonacular,
+                // so we extract what seems to be the main ingredient
+                const mainIngredient = extractMainIngredient(ingredients);
+                console.log("Main ingredient extracted:", mainIngredient);
                 
-                // build the search url
-                let apiUrl = `https://api.spoonacular.com/recipes/complexSearch?query=${encodeURIComponent(ingredients)}&number=6&addRecipeInformation=true&fillIngredients=true&apiKey=${API_KEY}`;
+                // First try to search by main ingredient
+                let apiUrl = `https://www.themealdb.com/api/json/v1/1/filter.php?i=${encodeURIComponent(mainIngredient)}`;
                 
-                // Add any dietary filters
-                if (dietPreferences.isVegetarian) {
-                    apiUrl += '&diet=vegetarian';
-                }
+                console.log("Fetching recipes from TheMealDB:", apiUrl);
                 
-                if (dietPreferences.isVegan) {
-                    apiUrl += '&diet=vegan';
-                }
-                
-                if (dietPreferences.isGlutenFree) {
-                    apiUrl += '&intolerances=gluten';
-                }
-                
-                if (dietPreferences.isDairyFree) {
-                    apiUrl += '&intolerances=dairy';
-                }
-                
-                console.log("Fetching recipes from API:", apiUrl);
-                
-                const response = await fetch(apiUrl);
+                let response = await fetch(apiUrl);
                 
                 if (!response.ok) {
                     const errorMessage = `Failed to fetch recipes: ${response.status} ${response.statusText}`;
                     console.error(errorMessage);
-                    
-                    // Provide specific error messages based on status code
-                    if (response.status === 401 || response.status === 403) {
-                        throw new Error('API_AUTH_ERROR');
-                    } else if (response.status === 429) {
-                        throw new Error('API_RATE_LIMIT');
-                    } else {
-                        throw new Error(errorMessage);
-                    }
+                    throw new Error('API_ERROR');
                 }
-                  const apiResponse = await response.json();
                 
-                // Track our API usage - each recipe costs 1 point
-                trackApiUsage(apiResponse.results ? apiResponse.results.length : 0);
-                                
-                // make sure we got something back
-                if (!apiResponse.results || apiResponse.results.length === 0) {
-                    console.log("No recipes found");
-                    data = []; 
-                } else {
-                    data = apiResponse.results.map(item => ({
-                        id: item.id,
-                        title: item.title,
-                        image: item.image,
-                        missedIngredientCount: item.missedIngredientCount || Math.floor(Math.random() * 3),
-                        usedIngredientCount: item.usedIngredientCount || Math.floor(Math.random() * 4)
-                    }));
+                const apiResponse = await response.json();
+                
+                // If no results by ingredient, try search by name (which is more flexible)
+                if (!apiResponse.meals) {
+                    console.log("No recipes found by ingredient, trying search by name");
+                    apiUrl = `https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(mainIngredient)}`;
                     
-                    console.log("Found recipes:", data);
+                    response = await fetch(apiUrl);
+                    
+                    if (!response.ok) {
+                        throw new Error('API_ERROR');
+                    }
+                    
+                    const nameSearchResponse = await response.json();
+                    
+                    if (nameSearchResponse.meals) {                        data = nameSearchResponse.meals.slice(0, 6).map(item => {
+                            const counts = generateIngredientCounts();
+                            return {
+                                id: item.idMeal,
+                                title: item.strMeal,
+                                image: item.strMealThumb,
+                                // Generate some randomized counts for a better experience
+                                missedIngredientCount: counts.missed,
+                                usedIngredientCount: counts.used
+                            };
+                        });
+                    }
+                } else {                    // Use the ingredient filter results
+                    data = apiResponse.meals.slice(0, 6).map(item => {
+                        const counts = generateIngredientCounts();
+                        return {
+                            id: item.idMeal,
+                            title: item.strMeal,
+                            image: item.strMealThumb,
+                            // Generate some randomized counts for a better experience
+                            missedIngredientCount: counts.missed,
+                            usedIngredientCount: counts.used
+                        };
+                    });
                 }
+                
+                console.log("Found recipes:", data);
+                
+                // Apply dietary filters manually since TheMealDB doesn't support them in the API
+                if (dietPreferences.isVegetarian || dietPreferences.isVegan || 
+                    dietPreferences.isGlutenFree || dietPreferences.isDairyFree) {
+                    
+                    // We'll need to get detailed info for each recipe to check ingredients
+                    const detailedRecipes = await Promise.all(
+                        data.map(async (recipe) => {
+                            const detailResponse = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${recipe.id}`);
+                            if (detailResponse.ok) {
+                                const detailData = await detailResponse.json();
+                                return detailData.meals ? detailData.meals[0] : null;
+                            }
+                            return null;
+                        })
+                    );
+                    
+                    // Filter out null results and apply dietary filters
+                    const filteredDetails = detailedRecipes
+                        .filter(recipe => recipe !== null)
+                        .filter(recipe => checkDietaryCompliance(recipe, dietPreferences));
+                      // Map back to our display format
+                    data = filteredDetails.map(item => {
+                        const counts = generateIngredientCounts();
+                        return {
+                            id: item.idMeal,
+                            title: item.strMeal,
+                            image: item.strMealThumb,
+                            missedIngredientCount: counts.missed,
+                            usedIngredientCount: counts.used
+                        };
+                    });
+                }
+                
             } catch (apiError) {
-                console.error("API error:", apiError);                  // show friendly error message depending on what went wrong
-                if (apiError.message === 'API_AUTH_ERROR') {
-                    chatMessages.removeChild(chatMessages.lastChild);
-                    addMessageToChat('bot', 'API key issue - using saved recipes instead 🔑');
-                    setTimeout(() => {
-                        addMessageToChat('bot', 'Looking for recipes with those ingredients <div class="loading-spinner"></div>');
-                    }, 1000);
-                } else if (apiError.message === 'API_RATE_LIMIT') {
-                    chatMessages.removeChild(chatMessages.lastChild);
-                    addMessageToChat('bot', 'API limit reached - using backup recipes 📚');
-                    setTimeout(() => {
-                        addMessageToChat('bot', 'Looking for recipes with those ingredients <div class="loading-spinner"></div>');
-                    }, 1000);
-                }
+                console.error("API error:", apiError);
+                
+                // show friendly error message
+                chatMessages.removeChild(chatMessages.lastChild);
+                addMessageToChat('bot', 'Connection issue - using saved recipes instead �');
+                setTimeout(() => {
+                    addMessageToChat('bot', 'Looking for recipes with those ingredients <div class="loading-spinner"></div>');
+                }, 1000);
                 
                 // Use backup recipe data
                 console.warn("Using local recipe data");
@@ -412,41 +436,64 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             console.log("Getting details for:", recipePreview.id);
-              // Check if we already know the API is invalid from localStorage
-            const isApiKeyValid = localStorage.getItem('apiKeyValid') !== 'false';
-            
-            // Check if we have enough API points left for this request (1 point for recipe details)
-            const haveEnoughPoints = canMakeApiRequest(1);
-            
-            // Don't even try if we know the API key is invalid or we don't have enough points
-            if (!isApiKeyValid || !haveEnoughPoints) {
-                const errorReason = localStorage.getItem('apiErrorReason') || 'unknown';
-                throw new Error(errorReason === 'auth' ? 'API_AUTH_ERROR' : 
-                               (errorReason === 'limit' ? 'API_RATE_LIMIT' : 'API_ERROR'));
-            }
             
             const response = await fetch(
-                `https://api.spoonacular.com/recipes/${recipePreview.id}/information?includeNutrition=false&apiKey=${API_KEY}`
+                `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${recipePreview.id}`
             );
             
             if (!response.ok) {
-                if (response.status === 401 || response.status === 403) {
-                    throw new Error('API_AUTH_ERROR');
-                } else if (response.status === 429) {
-                    throw new Error('API_RATE_LIMIT');
-                } else {
-                    throw new Error(`Failed to fetch recipe details: ${response.status} ${response.statusText}`);
+                throw new Error(`Failed to fetch recipe details: ${response.status} ${response.statusText}`);
+            }
+            
+            const apiResponse = await response.json();
+            
+            if (!apiResponse.meals || !apiResponse.meals[0]) {
+                throw new Error('Recipe details not found');
+            }
+            
+            // Convert TheMealDB format to our app's expected format
+            const meal = apiResponse.meals[0];
+            
+            // Get all ingredients (TheMealDB has ingredients as separate fields from 1-20)
+            const ingredients = [];
+            for (let i = 1; i <= 20; i++) {
+                const ingredient = meal[`strIngredient${i}`];
+                const measure = meal[`strMeasure${i}`];
+                
+                if (ingredient && ingredient.trim() !== '') {
+                    ingredients.push({
+                        original: `${measure ? measure.trim() : ''} ${ingredient.trim()}`
+                    });
                 }
             }
-              recipeDetail = await response.json();
+            
+            // Parse instructions into steps
+            const instructionsText = meal.strInstructions || '';
+            const instructionSteps = instructionsText.split(/\r\n|\n|\r/)
+                .filter(step => step.trim() !== '')
+                .map(step => ({ step: step.trim() }));
+            
+            recipeDetail = {
+                id: meal.idMeal,
+                title: meal.strMeal,
+                readyInMinutes: 30, // TheMealDB doesn't provide this, use default
+                servings: 4, // TheMealDB doesn't provide this, use default
+                image: meal.strMealThumb,
+                extendedIngredients: ingredients,
+                analyzedInstructions: [
+                    {
+                        steps: instructionSteps
+                    }
+                ],
+                sourceName: 'TheMealDB'
+            };
+            
             console.log("Recipe detail retrieved:", recipeDetail.title);
             
-            // Track API usage - 1 point per recipe detail
-            trackApiUsage(1);
-              // Add source attribution
+            // Add source attribution
             const recipeSource = document.createElement('div');
             recipeSource.className = 'recipe-source';
-            recipeSource.innerHTML = `<small>Recipe from: ${recipeDetail.sourceName || 'Spoonacular'}</small>`;
+            recipeSource.innerHTML = `<small>Recipe from: ${recipeDetail.sourceName}</small>`;
             
             // Add to modal
             setTimeout(() => {
@@ -458,23 +505,17 @@ document.addEventListener('DOMContentLoaded', function() {
             
         } catch (apiError) {
             console.error("API error fetching recipe details:", apiError);
-              // Note that we're using local data
-            let fallbackNote = 'Using saved recipe';
             
-            if (apiError.message === 'API_AUTH_ERROR') {
-                fallbackNote = 'API key issue - using saved recipe';
-            } else if (apiError.message === 'API_RATE_LIMIT') {
-                fallbackNote = 'API limit reached - using saved recipe';
-            } else {
-                fallbackNote = 'Connection error - using saved recipe';
-            }
+            // Note that we're using local data
+            const fallbackNote = 'Connection error - using saved recipe';
             
             // Log issue
             console.warn(fallbackNote);
             
             // Fallback to mock recipe details if API fails
             recipeDetail = getMockRecipeDetail(recipePreview.id);
-              // Add note about saved recipe
+            
+            // Add note about saved recipe
             setTimeout(() => {
                 const modalContent = document.querySelector('.recipe-detail-container');
                 if (modalContent) {
@@ -489,7 +530,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     modalContent.appendChild(demoNote);
                 }
             }, 100);
-              // Show message for connection errors only
+            
+            // Show message for connection errors only
             if (!(apiError.message === 'API_AUTH_ERROR' || apiError.message === 'API_RATE_LIMIT')) {
                 addMessageToChat('bot', 'Connection issue - showing saved recipe version instead 😓');
             }
@@ -683,228 +725,213 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
             }
         }
-    }
-    // Track our API usage to avoid exceeding the free tier limit (150 points/day)
-    function trackApiUsage(pointsUsed) {
-        const today = new Date().toDateString();
-        const currentUsage = parseInt(localStorage.getItem('apiPointsUsed') || '0');
-        const lastUsageDay = localStorage.getItem('apiUsageDate');
+    }    // Helper function to extract the main ingredient from a query
+    function extractMainIngredient(query) {
+        // Clean up query
+        const cleanedQuery = query.toLowerCase().trim();
         
-        // Reset counter if this is a new day
-        if (lastUsageDay !== today) {
-            localStorage.setItem('apiPointsUsed', pointsUsed.toString());
-            localStorage.setItem('apiUsageDate', today);
-        } else {
-            // Add to today's usage
-            localStorage.setItem('apiPointsUsed', (currentUsage + pointsUsed).toString());
+        // Common filler words to ignore
+        const fillerWords = ['and', 'with', 'using', 'has', 'have', 'contains', 'containing', 'i', 'we', 'the', 'some', 'my'];
+        
+        // Split into words
+        let words = cleanedQuery.split(/\s+/);
+        
+        // Remove filler words
+        words = words.filter(word => !fillerWords.includes(word));
+        
+        // Extract the first meaningful ingredient (simplistic approach)
+        // In a real app, this could be more sophisticated with ingredient recognition
+        const commonIngredients = [
+            'chicken', 'beef', 'pork', 'fish', 'pasta', 'rice', 'potato',
+            'tomato', 'carrot', 'onion', 'garlic', 'cheese', 'egg', 'milk',
+            'chocolate', 'apple', 'banana', 'strawberry', 'berry', 'flour',
+            'sugar', 'vegetable', 'fruit', 'meat', 'seafood', 'bread', 'soup'
+        ];
+        
+        // Try to find a common ingredient
+        for (const word of words) {
+            if (commonIngredients.includes(word)) {
+                return word;
+            }
         }
         
-        // Log current usage
-        const updatedUsage = parseInt(localStorage.getItem('apiPointsUsed'));
-        console.log(`API usage today: ${updatedUsage}/150 points`);
-        
-        // If we're getting close to the limit, show a warning
-        if (updatedUsage > 120 && !sessionStorage.getItem('apiLimitWarningShown')) {
-            addMessageToChat('bot', "We're getting close to today's API limit. Some features might switch to offline mode soon. 📊");
-            sessionStorage.setItem('apiLimitWarningShown', 'true');
-        }
-        
-        // If we've exceeded the limit, mark the API as invalid for today
-        if (updatedUsage >= 150) {
-            localStorage.setItem('apiKeyValid', 'false');
-            localStorage.setItem('apiErrorReason', 'limit');
-        }
-        
-        return updatedUsage;
+        // If no common ingredient found, return the first non-filler word
+        // or the first word if the array is now empty
+        return words.length > 0 ? words[0] : cleanedQuery.split(/\s+/)[0];
     }
     
-    // Call this before making API requests to check if we have enough points left
-    function canMakeApiRequest(requiredPoints) {
-        const today = new Date().toDateString();
-        const lastUsageDay = localStorage.getItem('apiUsageDate');
-        
-        // If this is a new day, reset the counter
-        if (lastUsageDay !== today) {
-            localStorage.setItem('apiPointsUsed', '0');
-            localStorage.setItem('apiUsageDate', today);
-            return true;
+    // Helper function to check if a recipe matches dietary preferences
+    function checkDietaryCompliance(recipe, preferences) {
+        if (!preferences || !Object.values(preferences).some(pref => pref === true)) {
+            return true; // No preferences to check
         }
         
-        // Check current usage
-        const currentUsage = parseInt(localStorage.getItem('apiPointsUsed') || '0');
-        const wouldExceedLimit = (currentUsage + requiredPoints) > 150;
+        // Get all ingredients from the recipe
+        const ingredients = [];
+        for (let i = 1; i <= 20; i++) {
+            const ingredient = recipe[`strIngredient${i}`];
+            if (ingredient && ingredient.trim() !== '') {
+                ingredients.push(ingredient.toLowerCase());
+            }
+        }
         
-        if (wouldExceedLimit) {
-            console.warn(`API usage limit would be exceeded: ${currentUsage}+${requiredPoints} > 150`);
-            
-            // Mark API as invalid for today due to limit
-            localStorage.setItem('apiKeyValid', 'false');
-            localStorage.setItem('apiErrorReason', 'limit');
-            return false;
+        // Non-vegetarian ingredients
+        const meatIngredients = ['beef', 'chicken', 'pork', 'lamb', 'turkey', 'bacon', 'ham', 'veal', 'meat'];
+        
+        // Non-vegan ingredients (includes non-vegetarian)
+        const nonVeganIngredients = [...meatIngredients, 'milk', 'cheese', 'cream', 'butter', 'egg', 'honey', 'yogurt'];
+        
+        // Gluten-containing ingredients
+        const glutenIngredients = ['flour', 'wheat', 'barley', 'rye', 'pasta', 'bread', 'cereal'];
+        
+        // Dairy ingredients
+        const dairyIngredients = ['milk', 'cheese', 'cream', 'butter', 'yogurt'];
+        
+        // Check dietary restrictions
+        if (preferences.isVegetarian) {
+            if (ingredients.some(ing => meatIngredients.some(meat => ing.includes(meat)))) {
+                return false;
+            }
+        }
+        
+        if (preferences.isVegan) {
+            if (ingredients.some(ing => nonVeganIngredients.some(nonVegan => ing.includes(nonVegan)))) {
+                return false;
+            }
+        }
+        
+        if (preferences.isGlutenFree) {
+            if (ingredients.some(ing => glutenIngredients.some(gluten => ing.includes(gluten)))) {
+                return false;
+            }
+        }
+        
+        if (preferences.isDairyFree) {
+            if (ingredients.some(ing => dairyIngredients.some(dairy => ing.includes(dairy)))) {
+                return false;
+            }
         }
         
         return true;
     }
 
-    // Tests the API connection - but not on every page load to save API calls
-    async function validateApiKey() {
-        // Only validate once per day using localStorage to save API calls
-        // This helps me stay under the 150 points daily limit on the free tier
-        const lastCheck = localStorage.getItem('apiKeyLastCheck');
-        const now = new Date().toDateString();
-        
-        if (lastCheck === now) {
-            const isValid = localStorage.getItem('apiKeyValid') === 'true';
-            console.log('Using cached API validation from today:', isValid ? 'valid' : 'invalid');
-              // If it was invalid earlier today but we haven't shown a message yet in this session
-            if (!isValid && !window.sessionStorage.getItem('apiErrorShown')) {
-                const errorReason = localStorage.getItem('apiErrorReason') || 'connection';
-                
-                // Use different error messages for variety
+    // Tests the API connection - simpler now with TheMealDB
+    async function checkApiConnection() {
+        // Only validate once per session for TheMealDB
+        if (sessionStorage.getItem('apiConnectionChecked')) {
+            const isConnected = sessionStorage.getItem('apiConnected') === 'true';
+            console.log('Using cached API connection check:', isConnected ? 'connected' : 'disconnected');
+            
+            // Update status indicator with stored info
+            updateStatusIndicator(isConnected);
+            
+            // If disconnected and we haven't shown a message yet in this session
+            if (!isConnected && !sessionStorage.getItem('apiErrorShown')) {
                 const connectionErrors = [
                     'Connection issue - some features will use saved data instead. 🔧',
                     'Having trouble reaching the recipe server - using local recipes for now. 🔌',
                     'Network hiccup detected - switching to offline recipe mode. 📡'
                 ];
                 
-                const authErrors = [
-                    'API key needs updating - using saved recipes for now. 🔑',
-                    'Authentication issue with recipe database - using backup recipes. 🗝️',
-                    'API credentials need refreshing - using local recipe collection. 🔐'
-                ];
-                
-                const limitErrors = [
-                    'API limit reached - using saved recipes until tomorrow. 🕒',
-                    'Daily recipe quota reached - switching to offline mode. ⏱️',
-                    'We\'ve used our daily recipe lookups - using saved recipes for now. �'
-                ];
-                
-                let errorMessage;
-                
-                if (errorReason === 'auth') {
-                    errorMessage = authErrors[Math.floor(Math.random() * authErrors.length)];
-                } else if (errorReason === 'limit') {
-                    errorMessage = limitErrors[Math.floor(Math.random() * limitErrors.length)];
-                } else {
-                    errorMessage = connectionErrors[Math.floor(Math.random() * connectionErrors.length)];
-                }
+                const errorMessage = connectionErrors[Math.floor(Math.random() * connectionErrors.length)];
                 
                 // Show message but only once per session
-                window.sessionStorage.setItem('apiErrorShown', 'true');
+                sessionStorage.setItem('apiErrorShown', 'true');
                 addMessageToChat('bot', errorMessage);
             }
             
-            return isValid;
+            return isConnected;
         }
         
-        // We need to check with the API since this is our first check today
+        // Initially show checking status
+        statusIcon.className = 'status-icon';
+        statusText.textContent = 'Checking connection...';
+        
+        // We need to check with the API
         try {
-            console.log('Validating API key with Spoonacular...');
-            const testResponse = await fetch(`https://api.spoonacular.com/recipes/random?number=1&apiKey=${API_KEY}`);
+            console.log('Checking TheMealDB API connection...');
+            // Simple test query - lookup a random recipe
+            const testResponse = await fetch('https://www.themealdb.com/api/json/v1/1/random.php');
             
             if (!testResponse.ok) {
-                // Create appropriate message                // Use different error messages for variety
-                const connectionErrors = [
-                    'Connection issue - some features will use saved data instead. 🔧',
-                    'Having trouble reaching the recipe server - using local recipes for now. 🔌',
-                    'Network hiccup detected - switching to offline recipe mode. 📡'
-                ];
-                
-                const authErrors = [
-                    'API key needs updating - using saved recipes for now. 🔑',
-                    'Authentication issue with recipe database - using backup recipes. 🗝️',
-                    'API credentials need refreshing - using local recipe collection. 🔐'
-                ];
-                
-                const limitErrors = [
-                    'API limit reached - using saved recipes until tomorrow. 🕒',
-                    'Daily recipe quota reached - switching to offline mode. ⏱️',
-                    'We\'ve used our daily recipe lookups - using saved recipes for now. 📆'
-                ];
-                
-                let errorMessage;
-                let errorReason = 'connection';
-                
-                if (testResponse.status === 401 || testResponse.status === 403) {
-                    errorMessage = authErrors[Math.floor(Math.random() * authErrors.length)];
-                    errorReason = 'auth';
-                } else if (testResponse.status === 429) {
-                    errorMessage = limitErrors[Math.floor(Math.random() * limitErrors.length)];
-                    errorReason = 'limit';
-                } else {
-                    errorMessage = connectionErrors[Math.floor(Math.random() * connectionErrors.length)];
-                }
-                
-                // Save error reason for later sessions today
-                localStorage.setItem('apiErrorReason', errorReason);
-                
-                // Show message
-                window.sessionStorage.setItem('apiErrorShown', 'true');
-                addMessageToChat('bot', errorMessage);
-                
-                // Update validation state
-                localStorage.setItem('apiKeyLastCheck', now);
-                localStorage.setItem('apiKeyValid', 'false');
-                return false;
+                throw new Error(`API responded with status: ${testResponse.status}`);
+            }
+            
+            // Verify we got valid data
+            const testData = await testResponse.json();
+            if (!testData.meals || !testData.meals.length) {
+                throw new Error('API returned empty data');
             }
             
             // API is working!
-            console.log('API key validation successful');
-            localStorage.setItem('apiKeyLastCheck', now);
-            localStorage.setItem('apiKeyValid', 'true');
+            console.log('API connection successful');
+            sessionStorage.setItem('apiConnectionChecked', 'true');
+            sessionStorage.setItem('apiConnected', 'true');
+            
+            // Update the status indicator to online
+            updateStatusIndicator(true);
+            
             return true;
         } catch (error) {
-            console.error('API validation error:', error);
+            console.error('API connection error:', error);
+            
             // Show a network error message
             addMessageToChat('bot', 'Unable to connect to the recipe service. Using demo data instead. Check your internet connection. 📶');
             
-            // Update validation state
-            localStorage.setItem('apiKeyLastCheck', now);
-            localStorage.setItem('apiKeyValid', 'false');
-            localStorage.setItem('apiErrorReason', 'connection');
-            window.sessionStorage.setItem('apiErrorShown', 'true');
-            return false;
+            // Update the status indicator to offline
+            updateStatusIndicator(false);
+            
+            // Update connection state
+            sessionStorage.setItem('apiConnectionChecked', 'true');
+            sessionStorage.setItem('apiConnected', 'false');
+            sessionStorage.setItem('apiErrorShown', 'true');
+              return false;
         }
-    }      // Check API key on startup but don't waste points if we already validated today
-    validateApiKey().then(isValid => {
-        if (isValid) {
-            console.log("API connection successful");
-            
-            // Show API usage stats
-            const today = new Date().toDateString();
-            const lastUsageDay = localStorage.getItem('apiUsageDate');
-            const currentUsage = parseInt(localStorage.getItem('apiPointsUsed') || '0');
-              // Variable welcome messages
-            const connectMessages = [
-                'Connected to recipe database! Ready to find dishes for your ingredients! 🌟',
-                'Recipe database is online! What shall we cook today? 🍲',
-                'Database connected successfully! Tell me what ingredients you have! 🧁',
-                'Ready to find some tasty recipes for you! What ingredients do you have? 🌮'
-            ];
-            const randomIndex = Math.floor(Math.random() * connectMessages.length);
-            
-            if (lastUsageDay !== today) {
-                // New day - reset counter and track this validation call (1 point)
-                trackApiUsage(1);  
-                setTimeout(() => {
+    }
+    
+    // Check connection on startup
+    checkApiConnection()
+        .then(function(isConnected) {
+            if (isConnected) {
+                console.log("API connection successful");
+                
+                // Ensure the status indicator shows online
+                updateStatusIndicator(true);
+                
+                // Variable welcome messages
+                const connectMessages = [
+                    'Connected to recipe database! Ready to find dishes for your ingredients! 🌟',
+                    'Recipe database is online! What shall we cook today? 🍲',
+                    'Database connected successfully! Tell me what ingredients you have! 🧁',
+                    'Ready to find some tasty recipes for you! What ingredients do you have? 🌮'
+                ];
+                const randomIndex = Math.floor(Math.random() * connectMessages.length);
+                
+                setTimeout(function() {
                     addMessageToChat('bot', connectMessages[randomIndex]);
                 }, 1000);
             } else {
-                // Already have usage today
-                console.log(`API usage so far today: ${currentUsage}/150 points`);
-                if (currentUsage === 0) {
-                    // This validation call was our first usage today
-                    trackApiUsage(1);
-                }
-                setTimeout(() => {
-                    addMessageToChat('bot', connectMessages[randomIndex]);
-                }, 1000);
+                console.warn("Using local recipe data");
+                
+                // Make sure the status indicator correctly shows offline state
+                updateStatusIndicator(false);
             }
+        })
+        .catch(function(error) {
+            console.error("Error checking API connection:", error);
+            updateStatusIndicator(false);
+        });
+      // Update the status indicator in the UI
+    function updateStatusIndicator(isOnline) {
+        if (isOnline) {
+            statusIcon.className = 'status-icon online';
+            statusText.textContent = 'Online - API Connected';
         } else {
-            console.warn("Using local recipe data");
+            statusIcon.className = 'status-icon offline';
+            statusText.textContent = 'Offline - Connection Issue';
         }
-    });
-    
+    }
+
     // Handle window resize and orientation change
     function adjustLayoutForMobile() {
         const isMobile = window.innerWidth <= 600;
@@ -1104,10 +1131,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 ]
             }
         };
-        
-        return details[id] || details[1]; // Default to first recipe if ID not found
+          return details[id] || details[1]; // Default to first recipe if ID not found
     }
     
-    // Initial setup
-    setupImageErrorHandling();
+    // Initial setup    setupImageErrorHandling();
+      // Initialize the status indicator 
+    const isConnected = sessionStorage.getItem('apiConnected') === 'true';
+    
+    // If we already know the API status from this session, update indicator immediately
+    if (sessionStorage.getItem('apiConnectionChecked')) {
+        updateStatusIndicator(isConnected);
+    } else {
+        // Otherwise, show checking message until checkApiConnection() completes
+        statusIcon.className = 'status-icon';
+        statusText.textContent = 'Checking connection...';
+    }
+    
+    // Helper functions for TheMealDB API integration
+
+    // This will generate randomized missed/used ingredients counts
+    // since TheMealDB doesn't provide this information
+    function generateIngredientCounts() {
+        return {
+            missed: Math.floor(Math.random() * 3),  // 0-2 missing ingredients
+            used: Math.floor(Math.random() * 3) + 2  // 2-4 used ingredients
+        };
+    }
 });
