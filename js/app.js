@@ -40,11 +40,26 @@ document.addEventListener('DOMContentLoaded', function() {
         "Welcome to SpiceStudio! Tell me what's in your fridge, and I'll find something yummy! 🍲",
         "Ready to cook something amazing? Let me know what ingredients you have! 🌮"
     ];
+      // Get a different greeting each time
+    function getRandomGreeting() {
+        // Store the last greeting index to avoid repeating
+        const lastIndex = parseInt(localStorage.getItem('lastGreetingIndex') || '-1');
+        let newIndex;
+        
+        // Make sure we don't use the same greeting twice in a row
+        do {
+            newIndex = Math.floor(Math.random() * greetings.length);
+        } while (newIndex === lastIndex && greetings.length > 1);
+        
+        // Save this index for next time
+        localStorage.setItem('lastGreetingIndex', newIndex.toString());
+        
+        return greetings[newIndex];
+    }
     
-    // Initialize with a random greeting
+    // Initialize with a random greeting when there are no messages yet
     if (chatMessages.children.length === 0) {
-        const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
-        addMessageToChat('bot', randomGreeting);
+        addMessageToChat('bot', getRandomGreeting());
     }
       // My Spoonacular API key
     const API_KEY = '699ef63ca0974a95b5f45fb3031e89ff';
@@ -524,8 +539,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Prevent body scrolling when modal is open (helps on mobile)
         document.body.style.overflow = 'hidden';
-    }
-      // Generates a spice suggestion for the recipe
+    }      // Generates a spice suggestion for the recipe
     function getSpiceSuggestion(recipe) {
         // My curated list of spice suggestions
         const suggestions = [
@@ -538,11 +552,28 @@ document.addEventListener('DOMContentLoaded', function() {
             "Try adding a cinnamon stick during cooking for a subtle warmth.",
             "A few fennel seeds would complement these flavors beautifully.",
             "Cardamom pods would add an exotic twist to this dish!",
-            "Try a splash of balsamic vinegar at the end to brighten all the flavors."
+            "Try a splash of balsamic vinegar at the end to brighten all the flavors.",
+            "A sprinkle of za'atar would give this a wonderful Middle Eastern flair.",
+            "Try adding a bit of garam masala for an Indian-inspired variation.",
+            "A touch of Chinese five-spice powder would make this recipe more exotic.",
+            "Finish with a drizzle of chili oil for a pleasant kick!",
+            "Some fresh lemon zest would brighten up all these flavors nicely."
         ];
         
+        // Use the last spice we suggested to avoid repetition
+        const lastSpiceIndex = parseInt(localStorage.getItem('lastSpiceIndex') || '-1');
+        let newIndex;
+        
+        // Make sure we don't use the same spice suggestion twice in a row
+        do {
+            newIndex = Math.floor(Math.random() * suggestions.length);
+        } while (newIndex === lastSpiceIndex && suggestions.length > 1);
+        
+        // Save this index for next time
+        localStorage.setItem('lastSpiceIndex', newIndex.toString());
+        
         // Return a random suggestion
-        return suggestions[Math.floor(Math.random() * suggestions.length)];
+        return suggestions[newIndex];
     }
       // figures out if people want special diets
     function detectDietaryPreferences(input) {
@@ -725,16 +756,37 @@ document.addEventListener('DOMContentLoaded', function() {
         if (lastCheck === now) {
             const isValid = localStorage.getItem('apiKeyValid') === 'true';
             console.log('Using cached API validation from today:', isValid ? 'valid' : 'invalid');
-            
-            // If it was invalid earlier today but we haven't shown a message yet in this session
+              // If it was invalid earlier today but we haven't shown a message yet in this session
             if (!isValid && !window.sessionStorage.getItem('apiErrorShown')) {
                 const errorReason = localStorage.getItem('apiErrorReason') || 'connection';
-                let errorMessage = 'Connection issue - some features will use saved data instead. 🔧';
+                
+                // Use different error messages for variety
+                const connectionErrors = [
+                    'Connection issue - some features will use saved data instead. 🔧',
+                    'Having trouble reaching the recipe server - using local recipes for now. 🔌',
+                    'Network hiccup detected - switching to offline recipe mode. 📡'
+                ];
+                
+                const authErrors = [
+                    'API key needs updating - using saved recipes for now. 🔑',
+                    'Authentication issue with recipe database - using backup recipes. 🗝️',
+                    'API credentials need refreshing - using local recipe collection. 🔐'
+                ];
+                
+                const limitErrors = [
+                    'API limit reached - using saved recipes until tomorrow. 🕒',
+                    'Daily recipe quota reached - switching to offline mode. ⏱️',
+                    'We\'ve used our daily recipe lookups - using saved recipes for now. �'
+                ];
+                
+                let errorMessage;
                 
                 if (errorReason === 'auth') {
-                    errorMessage = 'API key needs updating - using saved recipes for now. 🔑';
+                    errorMessage = authErrors[Math.floor(Math.random() * authErrors.length)];
                 } else if (errorReason === 'limit') {
-                    errorMessage = 'API limit reached - using saved recipes until tomorrow. 🕒';
+                    errorMessage = limitErrors[Math.floor(Math.random() * limitErrors.length)];
+                } else {
+                    errorMessage = connectionErrors[Math.floor(Math.random() * connectionErrors.length)];
                 }
                 
                 // Show message but only once per session
@@ -751,16 +803,36 @@ document.addEventListener('DOMContentLoaded', function() {
             const testResponse = await fetch(`https://api.spoonacular.com/recipes/random?number=1&apiKey=${API_KEY}`);
             
             if (!testResponse.ok) {
-                // Create appropriate message
-                let errorMessage = 'Connection issue - some features will use saved data instead. 🔧';
+                // Create appropriate message                // Use different error messages for variety
+                const connectionErrors = [
+                    'Connection issue - some features will use saved data instead. 🔧',
+                    'Having trouble reaching the recipe server - using local recipes for now. 🔌',
+                    'Network hiccup detected - switching to offline recipe mode. 📡'
+                ];
+                
+                const authErrors = [
+                    'API key needs updating - using saved recipes for now. 🔑',
+                    'Authentication issue with recipe database - using backup recipes. 🗝️',
+                    'API credentials need refreshing - using local recipe collection. 🔐'
+                ];
+                
+                const limitErrors = [
+                    'API limit reached - using saved recipes until tomorrow. 🕒',
+                    'Daily recipe quota reached - switching to offline mode. ⏱️',
+                    'We\'ve used our daily recipe lookups - using saved recipes for now. 📆'
+                ];
+                
+                let errorMessage;
                 let errorReason = 'connection';
                 
                 if (testResponse.status === 401 || testResponse.status === 403) {
-                    errorMessage = 'API key needs updating - using saved recipes for now. 🔑';
+                    errorMessage = authErrors[Math.floor(Math.random() * authErrors.length)];
                     errorReason = 'auth';
                 } else if (testResponse.status === 429) {
-                    errorMessage = 'API limit reached - using saved recipes until tomorrow. 🕒';
+                    errorMessage = limitErrors[Math.floor(Math.random() * limitErrors.length)];
                     errorReason = 'limit';
+                } else {
+                    errorMessage = connectionErrors[Math.floor(Math.random() * connectionErrors.length)];
                 }
                 
                 // Save error reason for later sessions today
@@ -802,12 +874,20 @@ document.addEventListener('DOMContentLoaded', function() {
             const today = new Date().toDateString();
             const lastUsageDay = localStorage.getItem('apiUsageDate');
             const currentUsage = parseInt(localStorage.getItem('apiPointsUsed') || '0');
+              // Variable welcome messages
+            const connectMessages = [
+                'Connected to recipe database! Ready to find dishes for your ingredients! 🌟',
+                'Recipe database is online! What shall we cook today? 🍲',
+                'Database connected successfully! Tell me what ingredients you have! 🧁',
+                'Ready to find some tasty recipes for you! What ingredients do you have? 🌮'
+            ];
+            const randomIndex = Math.floor(Math.random() * connectMessages.length);
             
             if (lastUsageDay !== today) {
                 // New day - reset counter and track this validation call (1 point)
                 trackApiUsage(1);  
                 setTimeout(() => {
-                    addMessageToChat('bot', 'Connected to recipe database! Ready to find dishes for your ingredients! 🌟');
+                    addMessageToChat('bot', connectMessages[randomIndex]);
                 }, 1000);
             } else {
                 // Already have usage today
@@ -817,7 +897,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     trackApiUsage(1);
                 }
                 setTimeout(() => {
-                    addMessageToChat('bot', 'Connected to recipe database! Ready to find dishes for your ingredients! 🌟');
+                    addMessageToChat('bot', connectMessages[randomIndex]);
                 }, 1000);
             }
         } else {
