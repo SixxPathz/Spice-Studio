@@ -317,11 +317,22 @@ h1, h2, h3 {
     width: 150px;
     height: 150px;
     margin: 0 auto;
-    background-image: url('https://i.imgur.com/YfLxXtY.png'); /* A placeholder doodle image */
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     opacity: 0.7;
+}
+
+.notebook-doodle::after {
+    content: "Recipes Coming Soon!";
+    display: block;
+    font-family: 'Caveat', cursive;
+    font-size: 16px;
+    color: var(--notebook-text);
+    text-align: center;
+    margin-top: 15px;
 }
 
 /* Recipe Card Styling */

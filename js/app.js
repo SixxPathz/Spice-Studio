@@ -10,6 +10,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const recipeModal = document.getElementById('recipe-modal');
     const closeButton = document.querySelector('.close-button');
     
+    // Add default image for broken recipe images
+    const defaultRecipeImage = 'https://spoonacular.com/recipeImages/default-recipe.jpg';
+    
+    // Helper function to handle image loading errors
+    function handleImageError(img) {
+        img.onerror = function() {
+            // Replace with a default cooking image
+            this.src = 'https://via.placeholder.com/312x231/e9d4c3/8e4444?text=Delicious+Recipe';
+            this.alt = 'Recipe placeholder image';
+        };
+        return img;
+    }
+
+    // Apply error handling to all recipe images
+    function setupImageErrorHandling() {
+        const recipeImages = document.querySelectorAll('.polaroid-container img');
+        recipeImages.forEach(img => handleImageError(img));
+        
+        // Also handle modal recipe image
+        const modalImg = document.getElementById('modal-recipe-image');
+        if (modalImg) handleImageError(modalImg);
+    }
+    
     // Bot personality phrases
     const greetings = [
         "Hi there! I'm your SpiceStudio assistant. What ingredients do you have in your kitchen today? 🥕🍅🧄",
@@ -242,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
             chatMessages.removeChild(chatMessages.lastChild); // Remove loading message
             addMessageToChat('bot', 'Sorry, I had trouble finding recipes right now. Please try again! 😓');
         }
-    }      // shows all the recipe cards
+    }    // shows all the recipe cards
     function displayRecipes(recipes) {
         // start fresh
         recipesContainer.innerHTML = '';
@@ -250,10 +273,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // let them know if we didn't find anything
         if (recipes.length === 0) {
             const noRecipesMsg = document.createElement('div');
-            noRecipesMsg.className = 'welcome-message';
-            noRecipesMsg.innerHTML = `
+            noRecipesMsg.className = 'welcome-message';            noRecipesMsg.innerHTML = `
                 <p>No recipes found with those ingredients. Try adding more ingredients!</p>
-                <div class="notebook-doodle"></div>
+                <div class="notebook-doodle">
+                    <!-- Inline SVG as a fallback -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="width:70px; height:70px;">
+                        <path fill="#8e4444" d="M64 96H0c0 123.7 100.3 224 224 224v144c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V320C288 196.3 187.7 96 64 96zm384-64c-84.2 0-157.4 46.5-195.7 115.2 27.7 30.2 48.2 66.9 59 107.6C424 243.1 512 147.9 512 32h-64z"></path>
+                    </svg>
+                </div>
             `;
             recipesContainer.appendChild(noRecipesMsg);
             return;
@@ -282,9 +309,11 @@ document.addEventListener('DOMContentLoaded', function() {
             emptySpace.style.height = '20px';
             recipesContainer.appendChild(emptySpace);
         }
-        
-        // Adjust layout for mobile after recipes are loaded
-        setTimeout(adjustLayoutForMobile, 100);
+          // Adjust layout for mobile after recipes are loaded
+        setTimeout(() => {
+            adjustLayoutForMobile();
+            setupImageErrorHandling(); // Apply error handling to all images
+        }, 100);
     }
       // Creates a polaroid-style recipe card
     function createRecipeCard(recipe) {
@@ -297,7 +326,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         card.innerHTML = `
             <div class="polaroid-container" data-caption="${recipe.title}">
-                <img src="${recipe.image}" alt="${recipe.title}">
+                <img src="${recipe.image}" alt="${recipe.title}" onerror="this.src='https://via.placeholder.com/312x231/e9d4c3/8e4444?text=Delicious+Recipe'; this.alt='Recipe placeholder image';">
                 <div class="polaroid-tape"></div>
             </div>
             <div class="recipe-card-content">
@@ -418,12 +447,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!(apiError.message === 'API_AUTH_ERROR' || apiError.message === 'API_RATE_LIMIT')) {
                 addMessageToChat('bot', 'Connection issue - showing saved recipe version instead 😓');
             }
-        }
-          // update the modal with recipe details
+        }        // update the modal with recipe details
         document.getElementById('modal-recipe-title').textContent = recipeDetail.title;
         document.getElementById('modal-recipe-time').innerHTML = `<i class="far fa-clock"></i> ${recipeDetail.readyInMinutes} mins`;
         document.getElementById('modal-recipe-servings').innerHTML = `<i class="fas fa-utensils"></i> ${recipeDetail.servings} servings`;
-        document.getElementById('modal-recipe-image').src = recipeDetail.image;
+        
+        // Update image with fallback
+        const modalImg = document.getElementById('modal-recipe-image');
+        modalImg.src = recipeDetail.image;
+        handleImageError(modalImg);
         
         // Add ingredients
         const ingredientsList = document.getElementById('modal-ingredients-list');
@@ -834,4 +866,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         return details[id] || details[1]; // Default to first recipe if ID not found
     }
+    
+    // Initial setup
+    setupImageErrorHandling();
 });
