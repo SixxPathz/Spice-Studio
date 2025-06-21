@@ -53,7 +53,7 @@ SpiceStudio/
 
 ## Credits
 
-- Food images sourced from Spoonacular API
+- Food images sourced from TheMealDB API
 - Fonts from Google Fonts
 - Icons from Font Awesome
 
