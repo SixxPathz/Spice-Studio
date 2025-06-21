@@ -416,12 +416,28 @@ h1, h2, h3 {
     color: var(--accent-color);
 }
 
-.recipe-card-ingredients {
+.recipe-card-difficulty {
     font-family: 'Indie Flower', cursive;
     font-size: 0.9rem;
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px dashed var(--notebook-lines);
+}
+
+/* Traffic light colors for recipe difficulty */
+.difficulty-easy {
+    color: #4CAF50;  /* Green = easy peasy */
+    font-weight: bold;
+}
+
+.difficulty-medium {
+    color: #FF9800;  /* Orange = bit of work */
+    font-weight: bold;
+}
+
+.difficulty-hard {
+    color: #F44336;  /* Red = challenging */
+    font-weight: bold;
 }
 
 /* Polaroid Styling */
@@ -879,8 +895,7 @@ h1, h2, h3 {
     .recipe-card h3 {
         font-size: 1rem;
     }
-    
-    .recipe-card-ingredients p {
+      .recipe-card-difficulty p {
         font-size: 0.85rem;
     }
     

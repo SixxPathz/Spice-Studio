@@ -39,13 +39,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const modalImg = document.getElementById('modal-recipe-image');
         if (modalImg) handleImageError(modalImg);
     }
-    
-    // Bot personality phrases
+      // Bot personality phrases
     const greetings = [
-        "Hi there! I'm your SpiceStudio assistant. What ingredients do you have in your kitchen today? 🥕🍅🧄",
-        "Hello chef! What delicious ingredients are we working with today? 🍳",
-        "Welcome to SpiceStudio! Tell me what's in your fridge, and I'll find something yummy! 🍲",
-        "Ready to cook something amazing? Let me know what ingredients you have! 🌮"
+        "*Bursts through kitchen door* GUESS WHO'S HERE TO SAVE DINNER! What ingredients survived in your fridge today? 🥕🍅🧄",
+        "Well butter my biscuit, it's a new chef! Whatcha got hiding in those cupboards, darling? 🍳",
+        "Your kitchen fairy godparent has arrived! *Waves wooden spoon like wand* Let's turn those random ingredients into MAGIC! 🍲",
+        "Hungry? Hangry? Just bored? I'm your cure! Show me your ingredient lineup and let's COOK THIS! 🌮",
+        "It's me! The only AI that knows the difference between cumin and cardamom! What're we cooking up today? ✨"
     ];
       // Get a different greeting each time
     function getRandomGreeting() {
@@ -312,15 +312,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 displayRecipes(data);
             } else if (dietaryRestrictionDetected && allRecipes && allRecipes.length > 0) {
                 // We had recipes but they were all filtered out
-                addMessageToChat('bot', "I couldn't find recipes matching your dietary preferences with these ingredients. Maybe try different ingredients? 🌿");
+                addMessageToChat('bot', "Houston, we have a dietary dilemma! Those ingredients won't work with your food preferences. Let's try something else from your kitchen kingdom! 🌿");
             } else {
-                addMessageToChat('bot', "Hmm, I couldn't find any recipes with those exact ingredients. Maybe try adding a few more? 🤔");
+                addMessageToChat('bot', "Well, tickle me surprised! Even MY culinary genius is stumped by those ingredients! Got anything else hiding in that pantry? 🤔");
             }
             
         } catch (error) {
             console.error('Error fetching recipes:', error);
             chatMessages.removeChild(chatMessages.lastChild); // Remove loading message
-            addMessageToChat('bot', 'Sorry, I had trouble finding recipes right now. Please try again! 😓');
+            addMessageToChat('bot', 'Whoopsie daisy! My recipe brain just did a somersault! Let\'s try that again with your ingredients - second time\'s the charm! 🤪');
         }
     }    // shows all the recipe cards
     function displayRecipes(recipes) {
@@ -387,11 +387,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="polaroid-tape"></div>
             </div>
             <div class="recipe-card-content">
-                <h3>${recipe.title}</h3>
-                <div class="recipe-card-ingredients">
-                    ${recipe.missedIngredientCount > 0 ? 
-                      `<p>You need ${recipe.missedIngredientCount} more ingredient${recipe.missedIngredientCount > 1 ? 's' : ''}</p>` : 
-                      '<p>You have all the ingredients! 🎉</p>'}
+                <h3>${recipe.title}</h3>                <div class="recipe-card-difficulty">
+                    ${getDifficultyIndicator(recipe)}
                 </div>
             </div>
         `;
@@ -826,11 +823,10 @@ document.addEventListener('DOMContentLoaded', function() {
             updateStatusIndicator(isConnected);
             
             // If disconnected and we haven't shown a message yet in this session
-            if (!isConnected && !sessionStorage.getItem('apiErrorShown')) {
-                const connectionErrors = [
-                    'Connection issue - some features will use saved data instead. 🔧',
-                    'Having trouble reaching the recipe server - using local recipes for now. 🔌',
-                    'Network hiccup detected - switching to offline recipe mode. 📡'
+            if (!isConnected && !sessionStorage.getItem('apiErrorShown')) {                const connectionErrors = [
+                    'MAYDAY! MAYDAY! Recipe satellites are down! Switching to my emergency cookbook stash! 🔧',
+                    'The internet gremlins ate my recipe connection! No worries, I\'ve got backup recipes in my chef\'s hat! 🔌',
+                    'Well, butter my circuits! Can\'t reach recipe HQ - activating my secret offline recipe vault! 📡'
                 ];
                 
                 const errorMessage = connectionErrors[Math.floor(Math.random() * connectionErrors.length)];
@@ -876,7 +872,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('API connection error:', error);
             
             // Show a network error message
-            addMessageToChat('bot', 'Unable to connect to the recipe service. Using demo data instead. Check your internet connection. 📶');
+            addMessageToChat('bot', 'OH THE CULINARY CALAMITY! My recipe brain can\'t phone home! *dramatically faints* But wait! *jumps back up* I\'ve got my trusty backup recipes! Your dinner is still saved! 📶');
             
             // Update the status indicator to offline
             updateStatusIndicator(false);
@@ -897,13 +893,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Ensure the status indicator shows online
                 updateStatusIndicator(true);
-                
-                // Variable welcome messages
+                  // Variable welcome messages
                 const connectMessages = [
-                    'Connected to recipe database! Ready to find dishes for your ingredients! 🌟',
-                    'Recipe database is online! What shall we cook today? 🍲',
-                    'Database connected successfully! Tell me what ingredients you have! 🧁',
-                    'Ready to find some tasty recipes for you! What ingredients do you have? 🌮'
+                    'BOOM! We\'re connected to flavor town! My recipe brain is READY TO RUMBLE! 🌟',
+                    'My recipe database is HOT HOT HOT and ready to rock your taste buds! Whatcha craving? 🍲',
+                    'Houston, we have connection! My recipe radar is picking up deliciousness in your future! 🧁',
+                    'The culinary universe is at your fingertips! What random ingredients are we turning into dinner tonight? 🌮',
+                    'Recipe engines: ACTIVATED! Chef mode: ENGAGED! What\'s in your kitchen arsenal? 🔥'
                 ];
                 const randomIndex = Math.floor(Math.random() * connectMessages.length);
                 
@@ -1147,14 +1143,35 @@ document.addEventListener('DOMContentLoaded', function() {
         statusText.textContent = 'Checking connection...';
     }
     
-    // Helper functions for TheMealDB API integration
-
-    // This will generate randomized missed/used ingredients counts
-    // since TheMealDB doesn't provide this information
+    // Helper functions for TheMealDB API integration    // Makes up some random ingredients counts for TheMealDB recipes
+    // TheMealDB doesn't tell us what ingredients the user needs vs. has
     function generateIngredientCounts() {
         return {
             missed: Math.floor(Math.random() * 3),  // 0-2 missing ingredients
             used: Math.floor(Math.random() * 3) + 2  // 2-4 used ingredients
         };
+    }
+      // Shows how hard a recipe is to make using chef icons
+    function getDifficultyIndicator(recipe) {
+        // More chefs = harder recipe (based on missing ingredients)
+        let difficulty;
+        let difficultyClass;
+        let difficultyEmoji;
+        
+        if (recipe.missedIngredientCount === 0) {
+            difficulty = "Easy";
+            difficultyClass = "difficulty-easy";
+            difficultyEmoji = "👨‍🍳";
+        } else if (recipe.missedIngredientCount === 1) {
+            difficulty = "Medium";
+            difficultyClass = "difficulty-medium";
+            difficultyEmoji = "👨‍🍳👨‍🍳";
+        } else {
+            difficulty = "Hard";
+            difficultyClass = "difficulty-hard";
+            difficultyEmoji = "👨‍🍳👨‍🍳👨‍🍳";
+        }
+        
+        return `<p class="${difficultyClass}">Difficulty: ${difficulty} ${difficultyEmoji}</p>`;
     }
 });
