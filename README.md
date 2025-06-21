@@ -9,14 +9,11 @@ SpiceStudio is a charming kitchen assistant web application that helps users fin
 - **Spice Suggestions**: Get recommendations for spices to elevate your meals.
 - **Fun, Quirky Bot Personality**: Interact with a charming kitchen assistant that has a personality.
 
-## Prerequisites
 
-You need to have a Spoonacular API key to use the recipe search functionality. You can get a free API key by signing up at [Spoonacular API](https://spoonacular.com/food-api).
 
 ## Setup
 
 1. Clone or download this repository to your local machine.
-2. Open the `js/app.js` file and replace `YOUR_SPOONACULAR_API_KEY` with your actual Spoonacular API key.
 3. Open the `index.html` file in your web browser to start using the application.
 
 ## How to Use
