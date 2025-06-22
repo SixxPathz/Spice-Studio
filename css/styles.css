@@ -1,0 +1,891 @@
+/* Global Styles */
+:root {
+    --notebook-bg: #f5f2e9;
+    --notebook-lines: #c9c6bd;
+    --notebook-text: #333;
+    --accent-color: #e74c3c;
+    --polaroid-bg: #fff;
+    --polaroid-border: #eee;
+    --chat-user-bg: #e9f5f9;
+    --chat-bot-bg: #f8e9f0;
+    --button-color: #4a9e76;
+    --notebook-cover: #8e4444;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Custom scrollbar styling - global for all scrollable elements */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(201, 198, 189, 0.2);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(142, 68, 68, 0.4);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(142, 68, 68, 0.6);
+}
+
+/* For Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(142, 68, 68, 0.4) rgba(201, 198, 189, 0.2);
+}
+
+body {
+    font-family: 'Noto Sans', sans-serif;
+    background: #f0f0f0;
+    color: var(--notebook-text);
+    line-height: 1.6;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-image: url('https://www.transparenttextures.com/patterns/cooking-icons.png');
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+h1, h2, h3 {
+    font-family: 'Caveat', cursive;
+    margin-bottom: 15px;
+}
+
+/* App Container */
+.app-container {
+    width: 90%;
+    max-width: 1200px;
+    height: 80vh;
+    position: relative;
+    perspective: 1500px;
+}
+
+/* Notebook Cover Styling */
+.notebook-cover {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: var(--notebook-cover);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    transform-origin: left;
+    transition: transform 1s ease;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    color: white;
+}
+
+.notebook-cover.open {
+    transform: rotateY(-160deg);
+}
+
+.notebook-cover h1 {
+    font-size: 4rem;
+    margin-bottom: 10px;
+}
+
+.notebook-cover p {
+    font-family: 'Indie Flower', cursive;
+    font-size: 1.5rem;
+    margin-bottom: 40px;
+}
+
+.notebook-spine {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 30px;
+    height: 100%;
+    background: #6e3434;
+    border-right: 4px solid #5e2d2d;
+    z-index: -1;
+}
+
+#open-notebook {
+    padding: 12px 24px;
+    font-family: 'Caveat', cursive;
+    font-size: 1.5rem;
+    font-weight: bold;
+    background-color: #fff;
+    color: var(--notebook-cover);
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+#open-notebook:hover {
+    background-color: #f8f8f8;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Notebook Styling */
+.notebook {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    background: transparent;
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    position: relative;
+}
+
+
+
+/* Notebook Pages */
+.notebook-page {
+    flex: 1;
+    padding: 30px;
+    background: var(--notebook-bg);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Page separation styling */
+.left-page {
+    border-right: 1px solid var(--notebook-lines);
+}
+
+.right-page {
+    border-left: 1px solid var(--notebook-lines);
+}
+
+/* Notebook Paper Lines */
+.notebook-page::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--notebook-lines);
+}
+
+.notebook-page::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        var(--notebook-bg),
+        var(--notebook-bg) 24px,
+        var(--notebook-lines) 25px
+    );
+    z-index: -1;
+    opacity: 0.4;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.page-header h2 {
+    font-size: 2.5rem;
+    color: var(--accent-color);
+}
+
+.page-header p {
+    font-family: 'Indie Flower', cursive;
+    font-size: 1.2rem;
+    color: #777;
+}
+
+/* Chat Interface */
+.chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+.message {
+    max-width: 80%;
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    border-radius: 10px;
+    position: relative;
+    clear: both;
+}
+
+.message p {
+    font-family: 'Indie Flower', cursive;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.message.bot {
+    float: left;
+    background-color: var(--chat-bot-bg);
+    border-bottom-left-radius: 0;
+}
+
+.message.user {
+    float: right;
+    background-color: var(--chat-user-bg);
+    border-bottom-right-radius: 0;
+    text-align: right;
+}
+
+.chat-input-area {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-top: 2px dashed var(--notebook-lines);
+}
+
+#user-input {
+    flex-grow: 1;
+    padding: 10px 15px;
+    font-family: 'Indie Flower', cursive;
+    font-size: 1.1rem;
+    border: 2px solid var(--notebook-lines);
+    border-radius: 20px;
+    margin-right: 10px;
+    background-color: rgba(255, 255, 255, 0.7);
+}
+
+#send-btn {
+    background-color: var(--button-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#send-btn:hover {
+    background-color: #3c8a64;
+    transform: scale(1.1);
+}
+
+/* Recipe Container */
+.recipes-container {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 25px;
+    padding: 10px;
+    overflow-y: auto;
+    height: calc(100% - 100px);
+}
+
+.welcome-message {
+    text-align: center;
+    width: 100%;
+    padding: 30px;
+}
+
+.welcome-message p {
+    font-family: 'Indie Flower', cursive;
+    font-size: 1.3rem;
+    margin-bottom: 20px;
+}
+
+.notebook-doodle {
+    width: 150px;
+    height: 150px;
+    margin: 0 auto;
+    background-image: url('https://i.imgur.com/YfLxXtY.png'); /* A placeholder doodle image */
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0.7;
+}
+
+/* Recipe Card Styling */
+.recipe-card {
+    width: 250px;
+    margin: 15px;
+    cursor: pointer;
+    transition: all 0.4s ease;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeInUp 0.6s forwards;
+    animation-delay: calc(var(--animation-order, 0) * 0.1s);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.recipe-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+}
+
+.recipe-card-content {
+    background: rgba(255, 255, 255, 0.8);
+    padding: 15px;
+    border-radius: 5px;
+}
+
+.recipe-card h3 {
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+    color: var(--accent-color);
+}
+
+.recipe-card-ingredients {
+    font-family: 'Indie Flower', cursive;
+    font-size: 0.9rem;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--notebook-lines);
+}
+
+/* Polaroid Styling */
+.polaroid-container {
+    background-color: var(--polaroid-bg);
+    padding: 10px 10px 40px 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: rotate(-3deg);
+    position: relative;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.recipe-card:nth-child(even) .polaroid-container {
+    transform: rotate(2deg);
+}
+
+.polaroid-container:hover {
+    transform: scale(1.03) rotate(-1deg);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.recipe-card:nth-child(even) .polaroid-container:hover {
+    transform: scale(1.03) rotate(1deg);
+}
+
+.polaroid-container img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    display: block;
+}
+
+.polaroid-tape {
+    position: absolute;
+    width: 80px;
+    height: 20px;
+    background-color: rgba(200, 200, 200, 0.4);
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%) rotate(2deg);
+}
+
+.polaroid-container::after {
+    content: attr(data-caption);
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: 'Indie Flower', cursive;
+    font-size: 1.1rem;
+    color: #555;
+}
+
+/* Large Polaroid for Modal */
+.polaroid-container.large {
+    max-width: 350px;
+    transform: rotate(-2deg);
+    margin: 20px auto;
+}
+
+.polaroid-container.large img {
+    height: 250px;
+}
+
+/* Modal Styling */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+.modal-content {
+    background-color: var(--notebook-bg);
+    margin: 5% auto;
+    width: 90%;
+    max-width: 900px;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    padding: 30px;
+    animation: fadeIn 0.5s;
+    position: relative;
+}
+
+@keyframes fadeIn {
+    from {opacity: 0; transform: translateY(-50px);}
+    to {opacity: 1; transform: translateY(0);}
+}
+
+.close-button {
+    position: absolute;
+    right: 20px;
+    top: 15px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #777;
+    cursor: pointer;
+}
+
+.close-button:hover {
+    color: #333;
+}
+
+/* Recipe Detail Styling */
+.recipe-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.recipe-header h2 {
+    font-size: 3rem;
+    color: var(--accent-color);
+}
+
+.recipe-meta {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    font-family: 'Indie Flower', cursive;
+    font-size: 1.2rem;
+    color: #555;
+}
+
+.recipe-body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+}
+
+.recipe-content {
+    flex: 1;
+    min-width: 300px;
+}
+
+.ingredients-section, .instructions-section, .spice-suggestion {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 10px;
+}
+
+.ingredients-section h3, .instructions-section h3, .spice-suggestion h3 {
+    color: var(--accent-color);
+    font-size: 2rem;
+    margin-bottom: 15px;
+}
+
+.ingredients-section ul, .instructions-section ol {
+    padding-left: 25px;
+    font-family: 'Indie Flower', cursive;
+    font-size: 1.2rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.ingredients-section li, .instructions-section li {
+    margin-bottom: 10px;
+}
+
+.spice-suggestion p {
+    font-family: 'Indie Flower', cursive;
+    font-size: 1.3rem;
+    font-style: italic;
+    color: #555;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(231, 76, 60, 0.3);
+    border-radius: 50%;
+    border-top-color: var(--accent-color);
+    animation: spin 1s linear infinite;
+    margin-left: 10px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Message animations */
+.message {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Typing indicator */
+.typing-indicator p {
+    display: flex;
+    align-items: center;
+}
+
+.typing-indicator .dots {
+    display: inline-block;
+    position: relative;
+    animation: dotTyping 1.5s infinite linear;
+    margin-left: 4px;
+}
+
+@keyframes dotTyping {
+    0% { content: "."; }
+    25% { content: ".."; }
+    50% { content: "..."; }
+    75% { content: ".."; }
+    100% { content: "."; }
+}
+
+/* Animations */
+.recipe-card {
+    animation: slideIn 0.5s ease forwards;
+    animation-delay: calc(var(--animation-order) * 0.1s);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(30px) rotate(var(--rotation, 0deg));
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) rotate(var(--rotation, 0deg));
+        opacity: 1;
+    }
+}
+
+/* Improve touch interactions for mobile */
+@media (hover: none) and (pointer: coarse) {
+    .recipe-card {
+        transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    
+    .recipe-card:active {
+        transform: scale(0.95);
+    }
+    
+    /* Increase tap targets for better mobile usability */
+    .chat-input-area button {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    .modal-tabs button {
+        min-height: 44px;
+    }
+    
+    /* Disable hover effects that don't work well on touch */
+    .recipe-card:hover {
+        transform: none;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Make recipe cards more visible when touched */
+    .recipe-card:active {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+}
+
+/* Responsive Styles */
+@media (max-width: 900px) {
+    .notebook {
+        flex-direction: column;
+        height: auto;
+        overflow-y: hidden; /* Change from auto to hidden to prevent double scrollbar */
+        width: 95%;
+        max-width: 600px;
+    }
+    
+    .notebook-page {
+        width: 100%;
+        height: auto;
+        min-height: 400px;
+        max-height: none;
+        overflow-y: auto;
+        margin: 10px 0;
+        border-radius: 8px;
+    }
+    
+    .left-page {
+        border-right: none;
+        border-bottom: 1px solid var(--notebook-lines);
+    }
+    
+    .right-page {
+        border-left: none;
+        border-top: 1px solid var(--notebook-lines);
+    }
+    
+    .chat-container, .recipes-container {
+        height: auto;
+        max-height: 500px;
+    }
+    
+    .modal-content {
+        width: 90%;
+        padding: 20px;
+        max-height: 85vh;
+        border-radius: 12px;
+    }
+    
+    .recipe-body {
+        flex-direction: column;
+    }
+    
+    .polaroid-container.large {
+        margin: 10px auto 20px;
+        transform: rotate(0);
+        width: 90%;
+        max-width: 350px;
+    }
+    
+    .recipe-info {
+        width: 100%;
+    }
+    
+    .recipe-info-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .modal-recipe-title {
+        font-size: 1.6rem;
+    }
+}
+
+@media (max-width: 600px) {
+    body {
+        padding: 0;
+        overflow: auto;
+    }
+    
+    .app-container {
+        width: 100%;
+        height: 100%;
+        min-height: 100vh;
+        padding: 0;
+    }
+    
+    .notebook-cover {
+        padding: 20px 15px;
+    }
+    
+    .notebook-cover h1 {
+        font-size: 2.5rem;
+    }
+    
+    .notebook-page {
+        padding: 15px 10px;
+        min-height: auto;
+        max-height: none;
+        overflow-y: visible;
+    }
+    
+    .recipe-card {
+        width: 90%;
+        max-width: 280px;
+        margin: 15px auto;
+    }
+    
+    .chat-messages {
+        max-height: 40vh;
+        padding: 10px;
+    }
+    
+    .recipes-container {
+        max-height: none;
+        padding: 10px 5px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .chat-input-area {
+        padding: 10px 5px;
+    }
+    
+    #user-input {
+        font-size: 14px;
+    }
+    
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+        padding: 15px 10px;
+        overflow-y: auto;
+    }
+    
+    .recipe-detail-container {
+        padding: 10px 5px;
+    }
+    
+    .recipe-body {
+        gap: 15px;
+    }
+    
+    .recipe-info {
+        gap: 10px;
+    }
+    
+    .modal-recipe-image {
+        max-width: 100%;
+        height: auto;
+    }
+    
+    .close-button {
+        top: 5px;
+        right: 5px;
+        font-size: 22px;
+    }
+}
+
+/* Extra small mobile devices */
+@media (max-width: 380px) {
+    .notebook-cover h1 {
+        font-size: 2rem;
+    }
+    
+    .notebook-cover p {
+        font-size: 1rem;
+    }
+    
+    #open-notebook {
+        padding: 8px 15px;
+        font-size: 1rem;
+    }
+    
+    .page-header h2 {
+        font-size: 1.4rem;
+    }
+    
+    .recipe-card {
+        max-width: 220px;
+    }
+    
+    .polaroid-container img {
+        height: 120px;
+    }
+    
+    .recipe-card h3 {
+        font-size: 1rem;
+    }
+    
+    .recipe-card-ingredients p {
+        font-size: 0.85rem;
+    }
+    
+    .modal-recipe-title {
+        font-size: 1.4rem;
+    }
+    
+    .modal-tabs button {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+    
+    #modal-ingredients-list li, #modal-instructions-list li {
+        font-size: 0.9rem;
+    }
+}
+
+/* Mobile Recipe Card Improvements */
+@media (max-width: 600px) {
+    /* Make polaroid images better sized for mobile */
+    .polaroid-container {
+        padding: 8px 8px 35px;
+    }
+    
+    /* Better spacing for recipe cards on mobile */
+    .recipes-container {
+        gap: 25px;
+    }
+    
+    /* Improve modal readability on mobile */
+    .recipe-detail-container {
+        font-size: 0.95rem;
+    }
+    
+    /* Ensure ingredients and steps are easy to read */
+    #modal-ingredients-list li, 
+    #modal-instructions-list li {
+        margin-bottom: 12px;
+        line-height: 1.5;
+    }
+    
+    /* Better spice suggestion visibility */
+    .spice-suggestion {
+        padding: 12px 15px;
+        margin: 15px 0;
+        font-size: 0.95rem;
+    }
+    
+    /* Sticky input area so it's always available */
+    .chat-input-area {
+        position: sticky;
+        bottom: 0;
+        background-color: var(--notebook-bg);
+        padding-top: 10px;
+        border-top: 1px solid var(--notebook-lines);
+        margin-top: 10px;
+        z-index: 5;
+    }
+}

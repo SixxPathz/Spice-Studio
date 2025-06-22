@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpiceStudio - Your Kitchen Sidekick</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Indie+Flower&family=Noto+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Notebook Cover -->
+        <div class="notebook-cover" id="notebook-cover">
+            <h1>SpiceStudio</h1>
+            <p>Your charming kitchen sidekick</p>
+            <div class="notebook-spine"></div>
+            <button id="open-notebook">Let's Cook! <i class="fas fa-utensils"></i></button>
+        </div>        <!-- Notebook Pages -->
+        <div class="notebook" id="notebook">
+            <!-- Left Page - Chat Interface -->
+            <div class="notebook-page left-page">
+                <div class="page-header">
+                    <h2>What's in your kitchen?</h2>
+                    <p>Tell me what ingredients you have and I'll whip up something delicious!</p>
+                </div>
+                
+                <div class="chat-container">
+                    <div class="chat-messages" id="chat-messages">
+                        <!-- Messages will appear here dynamically -->
+                        <div class="message bot">
+                            <p>Hi there! I'm your SpiceStudio assistant. What ingredients do you have in your kitchen today? 🥕🍅🧄</p>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-input-area">
+                        <input type="text" id="user-input" placeholder="e.g., chicken, rice, tomatoes...">
+                        <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Page - Recipe Display -->
+            <div class="notebook-page right-page">
+                <div class="page-header">
+                    <h2>Recipes for You</h2>
+                    <p>Based on your ingredients</p>
+                </div>
+                
+                <div class="recipes-container" id="recipes-container">
+                    <!-- Recipe cards will be added here dynamically -->
+                    <div class="welcome-message">
+                        <p>Your recipes will appear here once you tell me what ingredients you have!</p>
+                        <div class="notebook-doodle"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recipe Detail Modal -->
+    <div id="recipe-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <div class="recipe-detail-container">
+                <div class="recipe-header">
+                    <h2 id="modal-recipe-title">Recipe Title</h2>
+                    <div class="recipe-meta">
+                        <span id="modal-recipe-time"><i class="far fa-clock"></i> 30 mins</span>
+                        <span id="modal-recipe-servings"><i class="fas fa-utensils"></i> 4 servings</span>
+                    </div>
+                </div>
+                
+                <div class="recipe-body">
+                    <div class="polaroid-container large">
+                        <img id="modal-recipe-image" src="" alt="Recipe Image">
+                        <div class="polaroid-tape"></div>
+                    </div>
+                    
+                    <div class="recipe-content">
+                        <div class="ingredients-section">
+                            <h3>Ingredients</h3>
+                            <ul id="modal-ingredients-list">
+                                <!-- Ingredients will be added dynamically -->
+                            </ul>
+                        </div>
+                        
+                        <div class="instructions-section">
+                            <h3>Instructions</h3>
+                            <ol id="modal-instructions-list">
+                                <!-- Instructions will be added dynamically -->
+                            </ol>
+                        </div>
+                        
+                        <div class="spice-suggestion">
+                            <h3>Spice Suggestion</h3>
+                            <p id="modal-spice-suggestion">Try adding a pinch of smoked paprika to enhance the flavor!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
